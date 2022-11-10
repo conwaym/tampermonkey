@@ -1,0 +1,428 @@
+// ==UserScript==
+// @name         Huckberry Lindsay Script
+// @namespace    foo
+// @version      1.0
+// @description  https://sitecore.lightning.force.com/lightning/r/Opportunity/0063m00000qRnFQAA0/view
+// @author       Marcus Conway
+// @match        https://*.huckberry.com/*
+// @icon         data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    /* Notes:
+        This script is meant to work with Chris Castle's slide out menus. These menus should be loaded into the tenant
+        as Web Experiences. The github repo for the menus is at:
+        https://github.com/Chris-Castle/Sitecore-CDP-Scripts/tree/master/Experiences/Web
+        To customize this script for each unique demo's needs:
+            1. Set the ==UserScript== settings for TamperMonkey in the header block above
+            2. Complete the SETTINGS block immediately below this notes block
+                - Set which of the tenant object blocks to map into the Boxever settings.
+                - Set the appropriate cookie domain, POS, currency, and language for your demo.
+            3. Configure which Events you want enabled by setting each to true/false in the ENABLE EVENTS block below
+        This script came from a github repo at: https://github.com/linoscore/standardTamperMonkey/blob/main/tampermonkey.js
+    */
+
+    /** **************** SETTINGS ************** ***/
+        const tenant        = "SC_SalesEngr1USA";   // pick a tenant from the list in (tenant) below
+        const cookie_domain = "*.huckberry.com";          // your demo website TLD
+        const pos           = "StandardDemo";       // set to your POS, usually 'StandardDemo'
+        const currency      = "USD";                // set to USD or EUR
+        const language      = "EN";                 // leave as EN unless you have a specific use case
+        const vendor        = "Sitecore";           // set to Sitecore or Acxiom
+    /***********************************************/
+
+    //Sitecore CDP Settings
+        const SITECORECDP_POINT_OF_SALE     = pos;
+        const SITECORECDP_CURRENCY          = currency;
+        const SITECORECDP_COOKIEDOMAIN      = cookie_domain;
+        const SITECORECDP_LANGUAGE          = language;
+        //const SITECORECDP_API_TARGET_APAC   = "https://api-ap-southeast-2-production.boxever.com/v1.2";
+        const SITECORECDP_API_TARGET_EMEA   = "https://api.boxever.com/v1.2";
+        const SITECORECDP_API_TARGET_US     = "https://api-us.boxever.com/v1.2";
+        const SITECORECDP_WEB_FLOW_TARGET   = "https://d35vb5cccm4xzp.cloudfront.net";
+        const SITECORECDP_JS_LIB_SRC        = "https://d1mj578wat5n4o.cloudfront.net/boxever-1.4.8.min.js";
+        const SITECORECDP_REST_BASIC_AUTH   = "Basic ..."; // Set only if needed for Interactive API functions
+        const SITECORECDP_PAGE              = unsafeWindow.location.pathname + unsafeWindow.location.search;
+
+        let SC_CDP_Settings = {
+            point_of_sale:                  SITECORECDP_POINT_OF_SALE,
+            currency:                       SITECORECDP_CURRENCY,
+            cookie_domain:                  SITECORECDP_COOKIEDOMAIN,
+            language:                       SITECORECDP_LANGUAGE,
+            rest_api_basic_auth:            SITECORECDP_REST_BASIC_AUTH,
+            api_target:                     SITECORECDP_API_TARGET_EMEA,
+            web_flow_target:                SITECORECDP_WEB_FLOW_TARGET,
+            js_lib_src:                     SITECORECDP_JS_LIB_SRC,
+            page:                           SITECORECDP_PAGE
+        }
+
+    //Acxiom CDP Settings
+        const ACXIOMCDP_POINT_OF_SALE       = pos;
+        const ACXIOMCDP_CURRENCY            = currency;
+        const ACXIOMCDP_COOKIEDOMAIN        = cookie_domain;
+        const ACXIOMCDP_LANGUAGE            = language;
+        const ACXIOMCDP_API_TARGET          = "https://us-east-1a-api-decisioning.myacxiom.com/v1.2";
+        const ACXIOMCDP_WEB_FLOW_TARGET     = "https://dtt5ihfhc3f13.cloudfront.net";
+        const ACXIOMCDP_JS_LIB_SRC          = "https://d1mj578wat5n4o.cloudfront.net/boxever-1.4.8.min.js";
+        const ACXIOMCDP_REST_API_BASIC_AUTH = "Basic..." // Set only if needed for Interactive API functions
+
+        let Ax_CDP_Settings = {
+            point_of_sale:                  ACXIOMCDP_POINT_OF_SALE,
+            currency:                       ACXIOMCDP_CURRENCY,
+            cookie_domain:                  ACXIOMCDP_COOKIEDOMAIN,
+            language:                       ACXIOMCDP_LANGUAGE,
+            rest_api_basic_auth:            ACXIOMCDP_REST_API_BASIC_AUTH,
+            api_target:                     ACXIOMCDP_API_TARGET,
+            web_flow_target:                ACXIOMCDP_WEB_FLOW_TARGET,
+            js_lib_src:                     ACXIOMCDP_JS_LIB_SRC
+        }
+
+    /*****  Map Tenant Settings to CDP Settings  *****/
+    let CDPSettings = {};
+    switch (vendor) {
+        case "Sitecore":
+            CDPSettings = Object.assign({}, SC_CDP_Settings);
+            break;
+        case "Acxiom":
+            CDPSettings = Object.assign({}, Ax_CDP_Settings);
+            break;
+        default:
+            break;
+    }
+    switch (tenant) {
+        /* Sitecore SpinFinance - EU */
+            case "SC_SpinFinance":
+                CDPSettings.client_key = "pqsFinGP4nW3iqC4JzgRMGZMgODLuDVM";
+                break;
+        /*  Sitecore Boxever Labs (Spinair) - EU */
+            case "SC_SpinAir":
+                CDPSettings.client_key = "wjtc2eog1lvueo72kts3mn1ean0nentz";
+                break;
+        /*  Sitecore Partner Sandbox - EU */
+            case "SC_PartnerSandbox":
+                CDPSettings.client_key = "psfu6uh05hsr9c34rptlr06dn864cqrx";
+                break;
+        /*  Sitecore Spin Gaming - EU */
+            case "SC_SpinGaming":
+                CDPSettings.client_key = "pqsGAMEJ9jsRlJMQPTrnpk0cGxD4ab70";
+                break;
+        /*  Sitecore Spinach Air - EU */
+            case "SC_SpinachAir":
+                CDPSettings.client_key = "pqsPERS3lw12v5a9rrHPW1c4hET73GxQ";
+                break;
+        /*  Sitecore SpinHome - EU */
+            case "SC_SpinHome":
+                CDPSettings.client_key = "pqsHoMeZqwc3fXgLCQs1p21ImhAr6tPL";
+                break;
+        /*  Sitecore SpinMedia - EU */
+            case "SC_SpinMedia":
+                CDPSettings.client_key = "pqsMedIa6PvIs50quSIOAPHcL0TJTQpk";
+                break;
+        /*  Sitecore SpinShop - EU */
+            case "SC_SpinShop":
+                CDPSettings.client_key = "pqsSIOPAxhMC9zJLJSZNFURPNqALIFwd";
+                break;
+        /* Sitecore Sales Engineering 2 - EU */
+            case "SC_SalesEngr2EU":
+                CDPSettings.client_key = "sise2euno5hfjrh1xmt2pgt6utd2oafs";
+                break;
+        /* Sitecore EMEA-Personalize - EU */
+            case "EMEA-Personalize":
+                CDPSettings.client_key = "";
+                break;
+        /* Sitecore Sales Engineering 1 - USA */
+            case "SC_SalesEngr1USA":
+                CDPSettings.client_key = "sise1uscpabezjawzpn5z2djcai3v07u";
+                CDPSettings.api_target = SITECORECDP_API_TARGET_US;
+                break;
+        /* Sitecore Sales Engineering 2 - USA */
+            case "SC_SalesEngr2USA":
+                CDPSettings.client_key = "sise2usl84d0ouwq5w7zd4wvq1wn5xkd";
+                CDPSettings.api_target = SITECORECDP_API_TARGET_US;
+                break;
+        /* Sitecore Sales Engineering 3 - USA */
+            case "SC_SalesEngr3USA":
+                CDPSettings.client_key = "sise3uskv36mas604747apa9g4f4so0v";
+                CDPSettings.api_target = SITECORECDP_API_TARGET_US;
+                break;
+        /* Sitecore Sales Engineering 4 - USA */
+            case "SC_SalesEngr4USA":
+                CDPSettings.client_key = "sise4uss4r4bct75biztbzjtssc2xvaf";
+                CDPSettings.api_target = SITECORECDP_API_TARGET_US;
+                break;
+        /* Sitecore Sales Engineering 5 - USA */
+            case "SC_SalesEngr5USA":
+                CDPSettings.client_key = "sise5uscggg2lw1qfcrq1j2wg6pmg3wx";
+                CDPSettings.api_target = SITECORECDP_API_TARGET_US;
+                break;
+        /* Sitecore AMS-Personalize - USA */
+            case "AMS-Personalize":
+                CDPSettings.client_key = "psluszgchlfrucgpq87c48sipf10n4gv";
+                CDPSettings.api_target = SITECORECDP_API_TARGET_US;
+                break;
+        /* Acxiom Demo_Prod (SpinShop) */
+            case "Ax_DemoProd":
+                CDPSettings.client_key = "pqsSIOPAxhMC9zJLJSZNFURPNqALIFwd";
+                break;
+        /* Acxiom SpinBank */
+            case "Ax_SpinBank":
+                CDPSettings.client_key = "pqsFinGP4nW3iqC4JzgRMGZMgODLuDVM";
+                break;
+            default:
+                break;
+    }
+
+    // Don't Touch: this maps all the specific tenant settings into the object needed for
+    // the _boxever_settings object
+        unsafeWindow._boxever_settings = {
+            client_key:      CDPSettings.client_key,
+            target:          CDPSettings.api_target,
+            pointOfSale:     CDPSettings.point_of_sale,
+            cookie_domain:   CDPSettings.cookie_domain,
+            web_flow_target: CDPSettings.web_flow_target,
+            browser_id:      ''
+        };
+
+    /*****   **********************   **********************   *****/
+
+    // Timestamp creator
+        function getDate(){
+            // Create a date object from a date string
+            var date = new Date().toISOString;
+
+            // Return the formatted date
+            return date;
+        }
+
+    // 3. ENABLE EVENTS // Set each of these to true/false depending on need for Events
+        var SEND_VIEW_EVENT = true;
+        var SEND_URLPARAMS_EVENT = false;
+        var SEND_INTERACTIVE_TRIGGER1 = false;
+
+    // Set up and Send Events
+        loadScCdpLib();
+        if (SEND_VIEW_EVENT) {
+            delayUntilBrowserIdIsAvailable(sendViewEvent);
+        }
+        if (SEND_URLPARAMS_EVENT){
+            delayUntilBrowserIdIsAvailable(sendCmpIDEvent);
+        }
+        if (SEND_INTERACTIVE_TRIGGER1){
+            delayUntilBrowserIdIsAvailable(interactiveExperienceTrigger1);
+        }
+
+    // Capture and Store URL Query Parameters
+        var urlSearchParams = new URLSearchParams(window.location.search);
+        CDPSettings.params = Object.fromEntries(urlSearchParams.entries());
+        SEND_URLPARAMS_EVENT = Object.keys(CDPSettings.params).length === 0 ? false : true;
+
+    // Set up URL variables for parsing out page taxonomy terms
+        var siteHost = unsafeWindow.location.host;
+        var subDomain = siteHost.split('.')[0];
+        var pageURL = unsafeWindow.location.pathname;
+        var pageTaxonomy = {};
+        var pageTopic = '';
+        var siteSection = '';
+        var prodCat = '';
+
+    // Set Site Section for View Event
+        if (pageURL.length > 1){
+            siteSection = pageURL.split('/')[3];
+        } else {
+            siteSection = 'default';
+        } //console.log('Sitecore CDP Tampermonkey script - siteSection: ' + siteSection);
+
+    // Set Page Topic for View Event
+        if (subDomain === 'www'){
+            pageTopic = pageURL.split('/')[4];
+        }
+
+    // Set Product Category for View Event
+        if (subDomain === 'www'){
+            prodCat = pageURL.split('/')[5];
+        }
+
+    // Set Page Taxonomy for the View Event
+        pageTaxonomy = {
+            subDomain: subDomain, //www
+            siteSection: siteSection, //clothing
+            pageTopic: pageTopic, //women
+            prodCat: prodCat, //shorts
+            arbitraryFlag: ''
+        }; console.log('Sitecore CDP Tampermonkey script - Page Taxonomy: ' + pageTaxonomy.subDomain + ' | ' + pageTaxonomy.siteSection + ' | ' + pageTaxonomy.pageTopic + ' | ' + pageTaxonomy.prodCat);
+        CDPSettings.pageTaxonomy = pageTaxonomy;
+
+        function loadScCdpLib(callback) {
+            console.log('Sitecore CDP Tampermonkey script - loadScCdpLib');
+            var scriptElement = document.createElement('script');
+            scriptElement.type = 'text/javascript';
+            scriptElement.src = CDPSettings.js_lib_src;
+            scriptElement.async = false;
+            document.head.appendChild(scriptElement);
+        }
+
+    // Standard View Event
+        function sendViewEvent() {
+            CDPSettings.browser_id = Boxever.getID();
+            var pageTaxonomy = CDPSettings.pageTaxonomy;
+            console.log('Sitecore CDP Tampermonkey script - Browser ID: ' + CDPSettings.browser_id);
+            console.log('Sitecore CDP Tampermonkey script - sendViewEvent BEFORE');
+            var viewEvent = {
+                "browser_id": CDPSettings.browser_id,
+                "channel": "WEB",
+                "type": "VIEW",
+                "language": CDPSettings.language,
+                "currency": CDPSettings.currency,
+                "page": unsafeWindow.location.pathname + unsafeWindow.location.search,
+                "pos": CDPSettings.point_of_sale,
+                "session_data": {
+                    pageTaxonomy,
+                    "uri": unsafeWindow.location.pathname
+                    //"LO_Key1": "first value",
+                    //"LO_Key2": "second value"
+                }
+                /*"arbitrary_data": {
+                    "A LO_Key1": "A first value",
+                    "A LO_Key2": "A second value"
+                }*/
+            };
+            //viewEvent = Boxever.addUTMParams(viewEvent);
+            Boxever.eventCreate(viewEvent, function(data) {}, 'json');
+            console.log('Sitecore CDP Tampermonkey script - sendViewEvent SENT');
+        }
+
+    // Custom Event to Send URL Query Params
+        function sendCmpIDEvent(){
+            var params = CDPSettings.params;
+            var cmpIDEvent = {
+                "browser_id": CDPSettings.browser_id,
+                "channel": "WEB",
+                "type": "CMPID",
+                "language": CDPSettings.language,
+                "currency": CDPSettings.currency,
+                "page": unsafeWindow.location.pathname + unsafeWindow.location.search,
+                "pos": CDPSettings.point_of_sale,
+                "session_data": {
+                    "uri": unsafeWindow.location.pathname
+                    //"LO_Key1": "first value",
+                    //"LO_Key2": "second value"
+                },
+                params
+            };
+            Boxever.eventCreate(cmpIDEvent, function(data) {}, 'json');
+        }
+    // Standard Identity Events
+        function sendIdentityEvent(email){
+            var identifyEvent = {
+                "browser_id": CDPSettings.browser_id,
+                "channel": "WEB",
+                "type": "IDENTITY",
+                "language": CDPSettings.language,
+                "currency": CDPSettings.currency,
+                "page": unsafeWindow.location.pathname + unsafeWindow.location.search,
+                "pos": CDPSettings.point_of_sale,
+                "email": email
+            };
+            Boxever.eventCreate(identifyEvent, function(data) {}, 'json');
+            alert("Identification Returned: " + email);
+        }
+
+    // Delay Sending any Events until Browser ID is Available
+        function delayUntilBrowserIdIsAvailable(functionToDelay) {
+            if (unsafeWindow.Boxever == null || unsafeWindow.Boxever == undefined || unsafeWindow.Boxever === "undefined" || unsafeWindow.Boxever.getID() === "anonymous") {
+                const timeToWaitInMilliseconds = 300;
+                console.log(`Sitecore CDP Tampermonkey script - browserId is not yet available. Waiting ${timeToWaitInMilliseconds}ms before retrying.`);
+                unsafeWindow.setTimeout(delayUntilBrowserIdIsAvailable, timeToWaitInMilliseconds, functionToDelay);
+            } else {
+                functionToDelay();
+            }
+        }
+
+    /***** ***** ***** ***** ***** *****/
+    /*****   Demo Customizations   *****/
+    /***** ***** ***** ***** ***** *****/
+
+    // Set up the DOM with custom HTML Attributes //
+    // We'll use these later to help us attach our data to DOM elements //
+       //$('#main-featured-trending > div > div.table-frame-col-30.trending').attr('sc_htmlcomponent','articleList');
+
+    // Fetch the a Custom Full Stack Experience API Response //
+    // Must set the Full Stack Experience ID or this won't call in the data //
+        function interactiveExperienceTrigger1(){
+            CDPSettings.fullStackExp1 = "feature_trending_articles"; // set the Full Stack Experience ID
+            var callFlowsContext = {
+                context: {
+                    "channel": "WEB",  // update before using. e.g. “WEB”
+                    "language": CDPSettings.language,  // update before using. e.g. “en”
+                    "currencyCode": CDPSettings.currency, // update before using. e.g. “EUR”
+                    "pointOfSale": CDPSettings.point_of_sale, // or value from your data layer
+                    "browserId": CDPSettings.browser_id,
+                    "clientKey": CDPSettings.client_key,
+                    "friendlyId": CDPSettings.fullStackExp1
+                }
+            };
+            function sendMyCustomEvent(email){
+            var identifyEvent = {
+                "browser_id": CDPSettings.browser_id,
+                "channel": "WEB",
+                "type": "LOGIN",
+                "language": CDPSettings.language,
+                "currency": CDPSettings.currency,
+                "page": unsafeWindow.location.pathname + unsafeWindow.location.search,
+                "pos": CDPSettings.point_of_sale,
+                "email": email
+            };
+            Boxever.eventCreate(identifyEvent, function(data) {}, 'json');
+            alert("Identification Returned: " + email);
+        }
+            Boxever.callFlows(callFlowsContext, function(response) {
+                // use the response object
+                CDPSettings.interactiveExpData1 = {
+                    'feature_trending_articles': response
+                };
+            }, 'json');
+
+            // Inject API Response to Trending Articles Component //
+            function buildInjectedArticleList(){
+                var list = CDPSettings.interactiveExpData1.feature_trending_articles.articles;
+                var injectedList = '';
+                for (let i = 0; i < list.length; i++) {
+                    list[i].articleType = 'article';
+                    list[i].articleLink = '/global/en/pages/about-deloitte/press-releases/deloitte-ranked-consulting-service-provider-worldwide-by-revenue-according-to-gartner.html';
+                    injectedList +=
+                        '<li class="trending-item" data-promoname="' + list[i].articleTitle + '" data-promocategory="dynamic" data-promotype="standard" data-promocontenttype="' + list[i].articleType + '" id="trending-promo1" data-cq-id="ebf2c9ea">' +
+                        '<a href="' + list[i].articleLink + '" id="trending' + i + '" style="height:143.36px"' +
+                        '<h4>' + list[i].articleTitle + '</h4><h4>' + list[i].articleBlurb + '</h4><h5>' + list[i].articleType + '</h5></a></li>';
+                }
+                $('div[sc_htmlcomponent="articleList"] ol.trending-list').empty().append(injectedList);
+            }
+            setTimeout(buildInjectedArticleList,1500); // Create a timeout to account for the race conditions of loading DOM, calling CDP, adjusting DOM
+        }
+        // Keystroke Triggers
+           var evtListener = document.querySelector('body');
+            evtListener.addEventListener("keydown", (event) => {
+                switch (event.which){
+                    // Anonymous Session
+                    case 65:
+                        console.log('Keydown a');
+                        Boxever.reset();
+                        alert("Session Reset: Refresh the Page");
+                        break;
+                    // Identity Events
+                    case 49:
+                        console.log('Keydown 1');
+                        var email1 = 'travis.d@gmail.com';
+                        sendIdentityEvent(email1);
+                        break;
+                    case 50:
+                        console.log('Keydown 2');
+                        var email2 = 'lindsay.ogden+kd2@gmail.com';
+                        sendMyCustomEvent(email2);
+                        break;
+                    default:
+                        console.log('some other key was pressed');
+                }
+            });
+})();
