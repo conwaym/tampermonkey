@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Huckberry Lindsay Script
-// @namespace    foo
+// @name         2022 11 | Huckberry / CDP+P
+// @namespace    SitecoreCDP_DemoScript_Huckberry
 // @version      1.0
 // @description  https://sitecore.lightning.force.com/lightning/r/Opportunity/0063m00000qRnFQAA0/view
 // @author       Marcus Conway
@@ -26,7 +26,7 @@
 
     /** **************** SETTINGS ************** ***/
         const tenant        = "SC_SalesEngr1USA";   // pick a tenant from the list in (tenant) below
-        const cookie_domain = "*.huckberry.com";          // your demo website TLD
+        const cookie_domain = "*.huckberry.com";    // your demo website TLD
         const pos           = "StandardDemo";       // set to your POS, usually 'StandardDemo'
         const currency      = "USD";                // set to USD or EUR
         const language      = "EN";                 // leave as EN unless you have a specific use case
@@ -55,7 +55,8 @@
             api_target:                     SITECORECDP_API_TARGET_EMEA,
             web_flow_target:                SITECORECDP_WEB_FLOW_TARGET,
             js_lib_src:                     SITECORECDP_JS_LIB_SRC,
-            page:                           SITECORECDP_PAGE
+            page:                           SITECORECDP_PAGE,
+            idProvider:                     "SITECORE_ID"
         }
 
     //Acxiom CDP Settings
@@ -314,7 +315,7 @@
             Boxever.eventCreate(cmpIDEvent, function(data) {}, 'json');
         }
     // Standard Identity Events
-        function sendIdentityEvent(email){
+        function sendIdentityEvent(email, username){
             var identifyEvent = {
                 "browser_id": CDPSettings.browser_id,
                 "channel": "WEB",
@@ -323,7 +324,11 @@
                 "currency": CDPSettings.currency,
                 "page": unsafeWindow.location.pathname + unsafeWindow.location.search,
                 "pos": CDPSettings.point_of_sale,
-                "email": email
+                "email": email,
+                "identifiers": [{
+                    "provider": CDPSettings.idProvider,
+                    "id": username
+                }]
             };
             Boxever.eventCreate(identifyEvent, function(data) {}, 'json');
             alert("Identification Returned: " + email);
@@ -364,19 +369,19 @@
                 }
             };
             function sendMyCustomEvent(email){
-            var identifyEvent = {
-                "browser_id": CDPSettings.browser_id,
-                "channel": "WEB",
-                "type": "LOGIN",
-                "language": CDPSettings.language,
-                "currency": CDPSettings.currency,
-                "page": unsafeWindow.location.pathname + unsafeWindow.location.search,
-                "pos": CDPSettings.point_of_sale,
-                "email": email
-            };
-            Boxever.eventCreate(identifyEvent, function(data) {}, 'json');
-            alert("Identification Returned: " + email);
-        }
+                var customEvent = {
+                    "browser_id": CDPSettings.browser_id,
+                    "channel": "WEB",
+                    "type": "LOGIN",
+                    "language": CDPSettings.language,
+                    "currency": CDPSettings.currency,
+                    "page": unsafeWindow.location.pathname + unsafeWindow.location.search,
+                    "pos": CDPSettings.point_of_sale,
+                    "email": email
+                };
+                Boxever.eventCreate(customEvent, function(data) {}, 'json');
+                alert("Identification Returned: " + email);
+            }
             Boxever.callFlows(callFlowsContext, function(response) {
                 // use the response object
                 CDPSettings.interactiveExpData1 = {
@@ -413,8 +418,9 @@
                     // Identity Events
                     case 49:
                         console.log('Keydown 1');
-                        var email1 = 'travis.d@gmail.com';
-                        sendIdentityEvent(email1);
+                        var email1 = 'travis.doe+1@gmail.com';
+                        var username1 = 'travis doe'
+                        sendIdentityEvent(email1, username1);
                         break;
                     case 50:
                         console.log('Keydown 2');
