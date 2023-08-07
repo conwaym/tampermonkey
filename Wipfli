@@ -34,7 +34,7 @@
         client_key: BOXEVER_CLIENT_KEY,
         target: BOXEVER_API_TARGET,
         pointOfSale: BOXEVER_POINT_OF_SALE,
-        cookie_domain: '',
+        cookie_domain: 'wipfli.com',
         web_flow_target: BOXEVER_WEB_FLOW_TARGET,
     };
 
